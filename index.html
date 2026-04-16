@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Feedback Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 28px 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .container { width: 100%; }
+
+  /* ====== TIMELINE GRID ====== */
+  .timeline {
+    display: grid;
+    grid-template-columns: 1.3fr 1.1fr 0.8fr 1.2fr 1.1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Horizontal line behind dots */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 40px;
+    right: 40px;
+    height: 3px;
+    background: #334155;
+    z-index: 1;
+  }
+
+  /* ====== DOT ROW ====== */
+  .dot-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 4px;
+    position: relative;
+    z-index: 2;
+  }
+  .dot {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #1e293b; border: 3px solid #475569;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #e2e8f0;
+  }
+  .dot-label {
+    font-size: 15px; font-weight: 700; color: #f1f5f9;
+    margin-top: 8px; text-align: center;
+  }
+  .dot-sublabel {
+    font-size: 12px; color: #94a3b8; text-align: center;
+    margin-top: 4px; max-width: 220px; line-height: 1.4;
+  }
+
+  /* ====== CARD ROW ====== */
+  .card-cell { padding: 14px 8px 0 8px; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 14px 16px;
+    height: 100%;
+  }
+  .card-desc { font-size: 13px; color: #94a3b8; line-height: 1.55; }
+  .card-desc strong { color: #e2e8f0; }
+  .card-desc code {
+    background: #0f172a; border: 1px solid #334155;
+    padding: 1px 4px; border-radius: 3px; font-size: 11px; color: #7dd3fc;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ====== BADGES ====== */
+  .badge { padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; display: inline-block; }
+  .badge-go { background: #10b98130; color: #34d399; }
+  .badge-discuss { background: #f59e0b30; color: #fbbf24; }
+  .badge-reject { background: #ef444430; color: #f87171; }
+
+  /* ====== SLACK ====== */
+  .slack-mock {
+    background: #1a1d21; border-radius: 8px;
+    padding: 10px 12px; margin-top: 8px; border: 1px solid #2c2f33;
+  }
+  .slack-msg { display: flex; gap: 8px; align-items: flex-start; }
+  .slack-avatar { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0; object-fit: cover; }
+  .slack-content { flex: 1; min-width: 0; }
+  .slack-name { font-size: 12px; font-weight: 700; color: #e2e8f0; }
+  .slack-name .time { font-weight: 400; color: #616572; font-size: 10px; margin-left: 4px; }
+  .slack-text { font-size: 12px; color: #d1d2d3; line-height: 1.45; margin-top: 2px; }
+  .slack-reaction {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #2c2f33; border: 1px solid #3a3d42;
+    border-radius: 10px; padding: 2px 7px; font-size: 11px; margin-top: 5px;
+  }
+  .slack-reaction .count { font-size: 10px; color: #8b8d94; }
+  .slack-thread { border-top: 1px solid #2c2f33; margin-top: 8px; padding-top: 8px; }
+  .shipped-badge { color: #34d399; font-weight: 600; }
+
+  /* ====== WHATSAPP ====== */
+  .wa-mock {
+    background: #0b141a; border-radius: 8px;
+    margin-top: 8px; border: 1px solid #1f2c34; overflow: hidden;
+  }
+  .wa-header {
+    background: #202c33; padding: 6px 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .wa-header-icon { width: 16px; height: 16px; }
+  .wa-header-name { font-size: 11px; font-weight: 600; color: #e9edef; }
+  .wa-body { padding: 10px; }
+  .wa-bubble {
+    background: #005c4b; border-radius: 0 8px 8px 8px;
+    padding: 8px 10px; font-size: 12px; color: #e9edef;
+    line-height: 1.4; position: relative;
+  }
+  .wa-bubble::before {
+    content: ''; position: absolute; top: 0; left: -6px;
+    border-top: 6px solid #005c4b; border-left: 6px solid transparent;
+  }
+  .wa-time { font-size: 9px; color: #ffffff80; text-align: right; margin-top: 3px; }
+
+  /* ====== TREE ====== */
+  .tree {
+    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+    padding: 8px 10px; margin-top: 8px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px; line-height: 1.5; color: #7dd3fc;
+  }
+  .tree .folder { color: #fbbf24; }
+  .tree .file { color: #94a3b8; }
+  .tree .highlight { color: #34d399; font-weight: 600; }
+
+  /* ====== DISCUSS CARD ====== */
+  .card-discuss { border-color: #f59e0b30; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="timeline">
+
+    <!-- ====== ROW 1: DOTS ====== -->
+    <div class="dot-cell">
+      <div class="dot">1</div>
+      <div class="dot-label">Ingestion feedback</div>
+      <div class="dot-sublabel">Un utilisateur remonte un besoin via les equipes sales ou CS</div>
+    </div>
+    <div class="dot-cell">
+      <div class="dot">2</div>
+      <div class="dot-label">Refinement</div>
+      <div class="dot-sublabel">L'agent analyse et classe chaque feedback</div>
+    </div>
+    <div class="dot-cell">
+      <div class="dot" style="border-color:#34d399;">3</div>
+      <div class="dot-label">Dev</div>
+      <div class="dot-sublabel">Le ticket est developpe</div>
+    </div>
+    <div class="dot-cell">
+      <div class="dot">4</div>
+      <div class="dot-label">Shipped</div>
+      <div class="dot-sublabel">La boucle est fermee, les equipes sont notifiees</div>
+    </div>
+    <div class="dot-cell">
+      <div class="dot">5</div>
+      <div class="dot-label">CS relaye au client</div>
+      <div class="dot-sublabel">Le client est informe directement</div>
+    </div>
+
+    <!-- ====== ROW 2: CARDS ====== -->
+
+    <!-- 1. Ingestion -->
+    <div class="card-cell">
+      <div class="card">
+        <div class="slack-mock" style="margin-top:0;">
+          <div class="slack-msg">
+            <img class="slack-avatar" src="https://ca.slack-edge.com/T08EE05R20H-U08DYHPNCBF-a4bb6dbf85da-512" alt="V">
+            <div class="slack-content">
+              <div class="slack-name">Valentin <span class="time">13h55</span></div>
+              <div class="slack-text">Elodie aimerait pouvoir modifier les mails auto envoyes a ses acquereurs. Notamment ajouter sa signature.</div>
+              <div class="slack-reaction">💾 <span class="count">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card-desc" style="margin-top:8px;">L'agent classe le feedback dans une arborescence de fichiers <code>.md</code> organisee par domaine fonctionnel.</div>
+        <div class="tree">
+          <span class="folder">features/</span><br>
+          ├── <span class="folder">matching/</span><br>
+          ├── <span class="folder">acquereurs/</span><br>
+          │ &nbsp;└── <span class="highlight">option-espace-acquereur/</span><br>
+          │ &nbsp; &nbsp;└── <span class="highlight">mail-invitation.md</span> ← new<br>
+          └── <span class="file">... 26 domaines, ~300 feedbacks</span>
+        </div>
+        <div class="tree" style="margin-top:6px; font-size:10px;">
+          <span style="color:#94a3b8;">---</span><br>
+          <span style="color:#94a3b8;">date:</span> <span style="color:#34d399;">2026-02-16</span><br>
+          <span style="color:#94a3b8;">status:</span> <span style="color:#fbbf24;">open</span><br>
+          <span style="color:#94a3b8;">priority:</span> <span style="color:#f87171;">high</span><br>
+          <span style="color:#94a3b8;">source:</span> slack<br>
+          <span style="color:#94a3b8;">author:</span> Valentin (retour Elodie)<br>
+          <span style="color:#94a3b8;">---</span><br>
+          <span style="color:#e2e8f0; font-weight:600;"># Personnalisation emails auto</span><br>
+          <span style="color:#94a3b8;">Elodie aimerait modifier les mails<br>envoyes a ses acquereurs...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Refinement -->
+    <div class="card-cell">
+      <div class="card" style="display:flex; flex-direction:column;">
+        <div class="card-desc">
+          <strong>Sizing et evaluation du feedback</strong><br><br>
+          L'agent croise avec les feedbacks similaires, evalue l'impact (tous les users, quelques-uns, un seul) et la complexite technique (triviale → architecturale).
+        </div>
+        <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+          <div class="badge badge-go">GO → Dev</div>
+          <div class="badge badge-discuss">DISCUSS ↓</div>
+          <div class="badge badge-reject">REJECT</div>
+        </div>
+
+        <!-- DISCUSS inline sous refinement -->
+        <div class="card card-discuss" style="margin-top:12px; padding:10px 12px;">
+          <div style="margin-bottom:4px;"><div class="badge badge-discuss" style="font-size:11px;">DISCUSS</div></div>
+          <div class="slack-mock" style="margin-top:4px;">
+            <div class="slack-msg">
+              <div style="width:28px;height:28px;border-radius:5px;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🤖</div>
+              <div class="slack-content">
+                <div class="slack-name" style="color:#a5b4fc;">Agent <span class="time">#product-refinement</span></div>
+                <div class="slack-text">
+                  Feedback : personnalisation emails<br>
+                  Impact : few-users · Complexite : medium<br>
+                  ❓ Faut-il supporter le HTML custom ?<br>
+                  cc @hugo @valentin
+                </div>
+              </div>
+            </div>
+            <div class="slack-thread">
+              <div class="slack-msg">
+                <img class="slack-avatar" src="https://ca.slack-edge.com/T08EE05R20H-U08DYHPNCBF-a4bb6dbf85da-512" alt="V">
+                <div class="slack-content">
+                  <div class="slack-name">Valentin <span class="time">14h12</span></div>
+                  <div class="slack-text">Pas de HTML, juste la signature texte + variables basiques suffisent pour Elodie.</div>
+                </div>
+              </div>
+            </div>
+            <div class="slack-thread" style="margin-top:4px; padding-top:4px;">
+              <div class="slack-msg">
+                <img class="slack-avatar" src="https://media.licdn.com/dms/image/v2/D4E03AQEMda-bXP-KzQ/profile-displayphoto-scale_400_400/B4EZlSvyiPIMAg-/0/1758029884116?e=1778112000&v=beta&t=ie8cpwVmbJRQagKN9GJNnZouptx6Z_E9It2TQyhvYIQ" alt="Hugo">
+                <div class="slack-content">
+                  <div class="slack-name">Hugo <span class="time">14h20</span></div>
+                  <div class="slack-text">Ok, dans ce cas il faut juste variabiliser les templates sans WYSIWYG. C'est un petit dev, go.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-desc" style="margin-top:6px; color:#fbbf24; font-size:11px;">
+            Decision prise → retour dans le flow <span style="color:#34d399; font-weight:700;">GO</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Dev -->
+    <div class="card-cell">
+      <div class="card">
+        <div class="card-desc">
+          Un agent IA ou un developpeur developpe le ticket.<br><br>
+          Build, tests, commit, push.<br><br>
+          Le feedback passe automatiquement en <code>in-progress</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Shipped -->
+    <div class="card-cell">
+      <div class="card">
+        <div class="slack-mock" style="margin-top:0;">
+          <div class="slack-msg">
+            <img class="slack-avatar" src="https://ca.slack-edge.com/T08EE05R20H-U08DYHPNCBF-a4bb6dbf85da-512" alt="V">
+            <div class="slack-content">
+              <div class="slack-name">Valentin <span class="time">16 fev.</span></div>
+              <div class="slack-text">Elodie aimerait modifier les mails auto...</div>
+              <div class="slack-reaction">✅ <span class="count">1</span></div>
+            </div>
+          </div>
+          <div class="slack-thread">
+            <div style="color:#616572;font-size:10px;margin-bottom:4px;">1 reponse</div>
+            <div class="slack-msg">
+              <img class="slack-avatar" src="https://media.licdn.com/dms/image/v2/D4E03AQEMda-bXP-KzQ/profile-displayphoto-scale_400_400/B4EZlSvyiPIMAg-/0/1758029884116?e=1778112000&v=beta&t=ie8cpwVmbJRQagKN9GJNnZouptx6Z_E9It2TQyhvYIQ" alt="Hugo">
+              <div class="slack-content">
+                <div class="slack-name">Hugo Blanc <span class="time">19 fev.</span></div>
+                <div class="slack-text"><span class="shipped-badge">✅ Shipped</span> — Email personnalisable depuis Profil → Integrations. Template custom avec variables, signature libre.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-desc" style="margin-top:8px;">
+          L'agent poste dans le <strong>thread Slack d'origine</strong>. Le feedback passe en <code>done</code>. Le ticket Linear est ferme.
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CS relaye -->
+    <div class="card-cell">
+      <div class="card">
+        <div class="wa-mock" style="margin-top:0;">
+          <div class="wa-header">
+            <svg class="wa-header-icon" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <span class="wa-header-name">Elodie Grisard</span>
+          </div>
+          <div class="wa-body">
+            <div class="wa-bubble">
+              Hello Elodie ! Tu peux maintenant personnaliser tes mails auto depuis ton profil. Signature, variables, tout y est !
+              <div class="wa-time">10:58 ✓✓</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-desc" style="margin-top:8px;">
+          <strong>Le client se sent ecoute.</strong><br>
+          Du feedback au deploy, sans passe-plat humain.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
